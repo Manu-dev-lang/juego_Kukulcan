@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>El Ascenso a Ka'an y Pico Polar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      overflow: hidden; 
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+
+    /* =====================================================
+       MENÚ DE SELECCIÓN DE SKIN
+       Mitad izquierda: Kukulkán  |  Mitad derecha: Navidad
+       Los dos fondos se mezclan con un degradado en el centro.
+       ===================================================== */
+    #menu-skins {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      overflow: hidden;
+      /* Si alguna imagen no carga, se ve este degradado de respaldo */
+      background: linear-gradient(to right, #3a1a05 0%, #3a1a05 40%, #0b2a4a 60%, #0b2a4a 100%);
+      z-index: 10;
+    }
+
+    .fondo-skin {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* Kukulkán ocupa todo el fondo; Navidad se funde encima desde la derecha */
+    #fondo-normal {
+      background-image: url('assets_normal/menu_background.png');
+    }
+    #fondo-navidad {
+      background-image: url('assets_navidad/menu_background.png');
+      -webkit-mask-image: linear-gradient(to right, transparent 30%, #000 70%);
+              mask-image: linear-gradient(to right, transparent 30%, #000 70%);
+    }
+
+    /* Velo oscuro suave para que el texto y los botones se lean bien */
+    #velo-menu {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background:
+        radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);
+      pointer-events: none;
+    }
+
+    /* Ancho y alto fijos al 100% y flex: none, para que el diseño NO dependa
+       del "display" de #menu-skins. El botón CARPETAS/VERSIONES del juego lo
+       vuelve a mostrar con display = "flex" (en fila); sin esto el contenido
+       se encogía y se movía de lugar. */
+    #contenido-menu {
+      position: relative;
+      z-index: 1;
+      box-sizing: border-box;
+      flex: none;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #contenido-menu h1 {
+      margin: 0;
+      padding: 5vh 20px 0;
+      font-family: Georgia, serif;
+      font-size: clamp(26px, 4.2vw, 52px);
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.9), 0 0 24px rgba(0,0,0,0.7);
+    }
+
+    /* Las dos mitades, cada botón centrado en la suya */
+    .mitades {
+      flex: 1;
+      width: 100%;
+      display: flex;
+    }
+    .mitad {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+    }
+
+    .btn-skin {
+      color: #fff;
+      padding: 18px 38px;
+      font-family: Georgia, serif;
+      font-size: clamp(18px, 2.2vw, 28px);
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.6);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+    .btn-skin:hover,
+    .btn-skin:focus-visible {
+      transform: scale(1.06);
+      filter: brightness(1.12);
+      outline: none;
+    }
+
+    /* Kukulkán: mismos colores que los botones del juego (rojo a naranja, borde amarillo) */
+    .btn-normal {
+      background: linear-gradient(to bottom, #ff2a1a, #ff9a1a);
+      border: 3px solid #ffe600;
+    }
+    .btn-normal:hover,
+    .btn-normal:focus-visible {
+      box-shadow: 0 0 28px rgba(255, 230, 0, 0.75), 0 6px 22px rgba(0,0,0,0.6);
+    }
+
+    /* Navidad: rojo fuerte con borde blanco */
+    .btn-navidad {
+      background: #e00000;
+      border: 3px solid #ffffff;
+    }
+    .btn-navidad:hover,
+    .btn-navidad:focus-visible {
+      box-shadow: 0 0 28px rgba(255, 255, 255, 0.75), 0 6px 22px rgba(0,0,0,0.6);
+    }
+
+    .idiomas {
+      padding: 0 0 4vh;
+    }
+    .btn-idioma {
+      background: rgba(0,0,0,0.45);
+      color: #ddd;
+      padding: 8px 18px;
+      margin: 4px;
+      font-size: 16px;
+      border: 2px solid #888;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-idioma.activo {
+      color: #00ff7f;
+      border-color: #00ff7f;
+    }
+
+    /* Pantallas verticales (celular): las mitades pasan a ser arriba/abajo */
+    @media (max-aspect-ratio: 1/1) {
+      #fondo-navidad {
+        -webkit-mask-image: linear-gradient(to bottom, transparent 30%, #000 70%);
+                mask-image: linear-gradient(to bottom, transparent 30%, #000 70%);
+      }
+      .mitades {
+        flex-direction: column;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn-skin { transition: none; }
+    }
+  </style>
+
+  <!-- Para instalar el juego como app -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Ka'an">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+</head>
+<body>
+    
+    <div id="menu-skins">
+        <div class="fondo-skin" id="fondo-normal"></div>
+        <div class="fondo-skin" id="fondo-navidad"></div>
+        <div id="velo-menu"></div>
+
+        <div id="contenido-menu">
+            <h1 data-i18n="skin.titulo">Selecciona la versión del juego</h1>
+
+            <div class="mitades">
+                <div class="mitad">
+                    <button class="btn-skin btn-normal" data-i18n="skin.normal" onclick="iniciarJuego('assets_normal/')">Versión Normal</button>
+                </div>
+                <div class="mitad">
+                    <button class="btn-skin btn-navidad" data-i18n="skin.navidad" onclick="iniciarJuego('assets_navidad/')">Versión Navideña</button>
+                </div>
+            </div>
+
+            <div class="idiomas">
+                <button class="btn-idioma" data-idioma="es" onclick="Idioma.cambiar('es')">Español</button>
+                <button class="btn-idioma" data-idioma="en" onclick="Idioma.cambiar('en')">English</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registro de progreso y datos de la cinemática -->
+    <script src="js/modulos/progreso.js"></script>
+    <!-- Ajustes del jugador e idioma -->
+    <script src="js/modulos/preferencias.js"></script>
+    <script src="js/modulos/idioma.js"></script>
+    <script src="js/datos/cinematicas.js"></script>
+    <!-- Catálogo de la tienda (datos) -->
+    <script src="js/datos/catalogo.js"></script>
+    <script src="js/boot.js"></script>
+    <!-- Cinemática -->
+    <script src="js/cinematica.js"></script>
+    <script src="js/carga.js"></script>
+    <script src="js/inicio.js"></script>
+    <!-- Instrucciones -->
+    <script src="js/instrucciones.js"></script> 
+    <!-- Tienda / museo -->
+    <script src="js/tienda.js"></script>
+    <!-- Ajustes -->
+    <script src="js/ajustes.js"></script>
+    <!-- Módulos del juego -->
+    <script src="js/modulos/utilidades.js"></script>
+    <script src="js/modulos/fondos.js"></script>
+    <script src="js/modulos/iluminacion.js"></script>
+    <script src="js/modulos/jugador.js"></script>
+    <script src="js/modulos/camara.js"></script>
+    <script src="js/modulos/enemigos.js"></script>
+    <script src="js/modulos/items.js"></script>
+    <script src="js/modulos/boss.js"></script>
+    <script src="js/modulos/eclipse.js"></script>
+    <script src="js/modulos/ui.js"></script>
+    <script src="js/modulos/pantallasfin.js"></script>
+    <script src="js/juego.js"></script>
+    <script src="js/main.js"></script>
+
+    <!-- Permite instalar el juego como app y jugarlo sin internet -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("sw.js");
+        });
+      }
+    </script>
+</body>
+</html>
